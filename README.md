@@ -1,3 +1,3 @@
-# rpcLib
+# grpcGen
 
-A library for multiple servers's communication.
+A tool for auto convert go code into gRPC proto file.
