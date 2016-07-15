@@ -17,14 +17,17 @@ type Reply struct {
         Email   string
         Counter int32
 }`
-	expect := &Msg{
-		Name: "Reply",
-		Members: []*MsgMember{
-			{Name: "Name", Type: "string"},
-			{Name: "Email", Type: "string"},
-			{Name: "Counter", Type: "int32"},
+	expect := []*Msg{
+		{
+			Name: "Reply",
+			Members: []*MsgMember{
+				{Name: "Name", Type: "string"},
+				{Name: "Email", Type: "string"},
+				{Name: "Counter", Type: "int32"},
+			},
 		},
 	}
+	actual := []*Msg{}
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, "", src, parser.ParseComments)
 	if err != nil {
@@ -32,16 +35,17 @@ type Reply struct {
 	}
 	for i, decl := range f.Decls {
 		if genDecl, ok := decl.(*ast.GenDecl); ok {
-			if actual, err := fetchMsg(genDecl); err == nil {
-				if !reflect.DeepEqual(expect, actual) {
-					t.Errorf("decl[%d] actual and expect are not the same", i)
-				}
+			if msg, err := fetchMsg(genDecl); err == nil {
+				actual = append(actual, msg)
 			} else {
 				t.Errorf("decl[%d] fetchMsg: %q", i, err)
 			}
 		} else {
 			t.Errorf("decl[%d] cannot be converted into GenDecl", i)
 		}
+	}
+	if !reflect.DeepEqual(expect, actual) {
+		t.Errorf("actual and expect are not the same")
 	}
 }
 
