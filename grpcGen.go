@@ -25,7 +25,7 @@ const (
 type OutTemplatData struct {
 	PackageName string
 	Messages    []*Msg
-	Services    []*Srv
+	Services    map[string][]*SrvFunc
 }
 
 // Msg stands for every declaration in gRPC Message type.
@@ -43,7 +43,7 @@ type MsgMember struct {
 // Srv stands for every RPC mapping function in gRPC Service type.
 type Srv struct {
 	Name  string
-	Funcs []*SrvFunc
+	Funcs *SrvFunc
 }
 
 // SrvFunc is the gRPC Service type's function member.
@@ -58,7 +58,7 @@ func main() {
 	log.SetPrefix("grpcGen: ")
 	for _, inPath := range os.Args[1:] {
 		msgs := []*Msg{}
-		srvs := []*Srv{}
+		srvs := make(map[string][]*SrvFunc)
 		f, err := fetchAstFileFromPath(inPath)
 		if err != nil {
 			log.Println(err)
@@ -73,17 +73,14 @@ func main() {
 				} else {
 					log.Printf("decl[%d] fetchMsg fail:%q", i, err)
 				}
-			} else {
-				log.Printf("decl[%d] cannot be converted into GenDecl", i)
-			}
-			if funcDecl, ok := decl.(*ast.FuncDecl); ok {
+			} else if funcDecl, ok := decl.(*ast.FuncDecl); ok {
 				if srv, err := fetchSrv(funcDecl); err == nil {
-					srvs = append(srvs, srv)
+					srvs[srv.Name] = append(srvs[srv.Name], srv.Funcs)
 				} else {
 					log.Printf("decl[%d] fetchSrv fail:%q", i, err)
 				}
 			} else {
-				log.Printf("decl[%d] cannot be converted into FuncDecl", i)
+				log.Printf("decl[%d] cannot be converted into FuncDecl or genDecl", i)
 			}
 		}
 		outPath, err := getOutPath(inPath)
@@ -194,7 +191,7 @@ func fetchSrv(funcDecl *ast.FuncDecl) (*Srv, error) {
 					fun.Out = strings.TrimPrefix(strType, srvParamSymbol)
 				}
 			}
-			srv.Funcs = append(srv.Funcs, fun)
+			srv.Funcs = fun
 		} else if strings.Contains(comment.Text, srvNameSymbol) {
 			foundSrvName = true
 			if srv.Name == "" {
@@ -228,9 +225,9 @@ func getTemplateText() string {
 syntax = "proto3";
 
 package {{ .PackageName }};
-{{ range .Services }}
-service {{ .Name }} {
-  {{ range .Funcs }}
+{{ range $key, $value := .Services }}
+service {{ $key }} {
+  {{ range $value }}
   rpc {{ .Name }} ({{ .In }}) returns ({{ .Out }}) {}
   {{ end }}
 }

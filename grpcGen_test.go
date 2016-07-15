@@ -52,13 +52,19 @@ package grpc_test
 // @grpcGen:SrvName: Greeting
 func (q *server) SayHello(ctx context.Context, in *pb.Request) (out *pb.Reply, err error) {
 	return &pb.Reply{Message: "Hello " + in.Name}, nil
+}
+// @grpcGen:Service
+// @grpcGen:SrvName: Greeting
+func (q *server) SayYa(ctx context.Context, in *pb.Request) (out *pb.Reply, err error) {
+	return &pb.Reply{Message: "Ya " + in.Name}, nil
 }`
-	expect := &Srv{
-		Name: "Greeting",
-		Funcs: []*SrvFunc{
+	expect := map[string][]*SrvFunc{
+		"Greeting": []*SrvFunc{
 			{Name: "SayHello", In: "Request", Out: "Reply"},
+			{Name: "SayYa", In: "Request", Out: "Reply"},
 		},
 	}
+	actual := make(map[string][]*SrvFunc)
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, "", src, parser.ParseComments)
 	if err != nil {
@@ -66,15 +72,16 @@ func (q *server) SayHello(ctx context.Context, in *pb.Request) (out *pb.Reply, e
 	}
 	for i, decl := range f.Decls {
 		if funcDecl, ok := decl.(*ast.FuncDecl); ok {
-			if actual, err := fetchSrv(funcDecl); err == nil {
-				if !reflect.DeepEqual(expect, actual) {
-					t.Errorf("decl[%d] actual and expect are not the same", i)
-				}
+			if srv, err := fetchSrv(funcDecl); err == nil {
+				actual[srv.Name] = append(actual[srv.Name], srv.Funcs)
 			} else {
 				t.Errorf("decl[%d] fetchSrv: %q", i, err)
 			}
 		} else {
 			t.Errorf("decl[%d] cannot be converted into FuncDecl", i)
 		}
+	}
+	if !reflect.DeepEqual(expect, actual) {
+		t.Errorf("actual and expect are not the same")
 	}
 }
