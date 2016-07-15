@@ -66,16 +66,24 @@ func main() {
 		if len(f.Decls) == 0 {
 			log.Fatalln("no declaration exists")
 		}
-		for _, decl := range f.Decls {
+		for i, decl := range f.Decls {
 			if genDecl, ok := decl.(*ast.GenDecl); ok {
-				if msg, ok := fetchMsg(genDecl); ok {
+				if msg, err := fetchMsg(genDecl); err == nil {
 					msgs = append(msgs, msg)
+				} else {
+					log.Printf("decl[%d] fetchMsg fail:%q", i, err)
 				}
+			} else {
+				log.Printf("decl[%d] cannot be converted into GenDecl", i)
 			}
 			if funcDecl, ok := decl.(*ast.FuncDecl); ok {
-				if srv, ok := fetchSrv(funcDecl); ok {
+				if srv, err := fetchSrv(funcDecl); err == nil {
 					srvs = append(srvs, srv)
+				} else {
+					log.Printf("decl[%d] fetchSrv fail:%q", i, err)
 				}
+			} else {
+				log.Printf("decl[%d] cannot be converted into FuncDecl", i)
 			}
 		}
 		outPath, err := getOutPath(inPath)
@@ -108,7 +116,7 @@ func main() {
 // fetchAstFileFromPath returns a ast file if input path is valid.
 func fetchAstFileFromPath(path string) (*ast.File, error) {
 	if path == "" {
-		return nil, fmt.Errorf("File does not exist.")
+		return nil, fmt.Errorf("File does not exist")
 	}
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
@@ -118,9 +126,9 @@ func fetchAstFileFromPath(path string) (*ast.File, error) {
 	return f, nil
 }
 
-func fetchMsg(genDecl *ast.GenDecl) (*Msg, bool) {
+func fetchMsg(genDecl *ast.GenDecl) (*Msg, error) {
 	if genDecl.Doc == nil {
-		return nil, false
+		return nil, fmt.Errorf("genDecl.Doc is nil")
 	}
 	msg := new(Msg)
 	found := false
@@ -132,8 +140,11 @@ func fetchMsg(genDecl *ast.GenDecl) (*Msg, bool) {
 			found = true
 			for _, spec := range genDecl.Specs {
 				typeSpec, ok := spec.(*ast.TypeSpec)
-				if !ok || typeSpec.Name == nil {
-					return nil, false
+				if !ok {
+					return nil, fmt.Errorf("fail to convert into ast.TypeSpec")
+				}
+				if typeSpec.Name == nil {
+					return nil, fmt.Errorf("typeSpec.Name is nil")
 				}
 				msg.Name = typeSpec.Name.Name
 				struc := typeSpec.Type.(*ast.StructType)
@@ -151,14 +162,14 @@ func fetchMsg(genDecl *ast.GenDecl) (*Msg, bool) {
 		}
 	}
 	if found {
-		return msg, true
+		return msg, nil
 	}
-	return nil, false
+	return nil, fmt.Errorf("%s symbol cannot be found", msgSymbol)
 }
 
-func fetchSrv(funcDecl *ast.FuncDecl) (*Srv, bool) {
+func fetchSrv(funcDecl *ast.FuncDecl) (*Srv, error) {
 	if funcDecl.Doc == nil {
-		return nil, false
+		return nil, fmt.Errorf("funcDecl.Doc is nil")
 	}
 	srv := new(Srv)
 	foundSrv := false
@@ -175,14 +186,12 @@ func fetchSrv(funcDecl *ast.FuncDecl) (*Srv, bool) {
 				strType := types.ExprString(param.Type)
 				if strings.Contains(strType, srvParamSymbol) {
 					fun.In = strings.TrimPrefix(strType, srvParamSymbol)
-
 				}
 			}
 			for _, ret := range funcDecl.Type.Results.List {
 				strType := types.ExprString(ret.Type)
 				if strings.Contains(strType, srvParamSymbol) {
 					fun.Out = strings.TrimPrefix(strType, srvParamSymbol)
-
 				}
 			}
 			srv.Funcs = append(srv.Funcs, fun)
@@ -195,10 +204,12 @@ func fetchSrv(funcDecl *ast.FuncDecl) (*Srv, bool) {
 			}
 		}
 	}
-	if foundSrvName && foundSrv {
-		return srv, true
+	if !foundSrvName {
+		return nil, fmt.Errorf("%s symbol cannot be found", srvNameSymbol)
+	} else if !foundSrv {
+		return nil, fmt.Errorf("%s symbol cannot be found", srvSymbol)
 	}
-	return nil, false
+	return srv, nil
 }
 
 func getOutPath(path string) (string, error) {
