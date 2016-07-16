@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -83,6 +84,10 @@ func main() {
 				log.Printf("decl[%d] cannot be converted into FuncDecl or genDecl", i)
 			}
 		}
+		err = markMsgAsComment(inPath)
+		if err != nil {
+			log.Fatalln(err)
+		}
 		outPath, err := getOutPath(inPath)
 		if err != nil {
 			log.Fatalln(err)
@@ -93,7 +98,7 @@ func main() {
 				log.Fatalln(err)
 			}
 		}
-		outFile, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, 0666)
+		outFile, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -216,6 +221,36 @@ func getOutPath(path string) (string, error) {
 	trimmed := strings.TrimSuffix(path, ".go")
 	dir, file := filepath.Split(trimmed)
 	return filepath.Join(dir, fmt.Sprintf("%s.go.proto", file)), nil
+}
+
+func markMsgAsComment(path string) error {
+	if path == "" {
+		return fmt.Errorf("File does not exist")
+	}
+	in, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	lines := strings.Split(string(in), "\n")
+	for i := 0; i < len(lines); i++ {
+		if strings.Contains(lines[i], msgSymbol) {
+			for j := i + 1; ; j++ {
+				if !strings.HasPrefix(lines[j], "//") {
+					lines[j] = "// " + lines[j]
+				}
+				if strings.Contains(lines[j], "}") {
+					i = j
+					break
+				}
+			}
+		}
+	}
+	out := strings.Join(lines, "\n")
+	err = ioutil.WriteFile(path, []byte(out), 0644)
+	if err != nil {
+		return nil
+	}
+	return nil
 }
 
 func getTemplateText() string {
