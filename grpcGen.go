@@ -84,32 +84,14 @@ func main() {
 				log.Printf("decl[%d] cannot be converted into FuncDecl or genDecl", i)
 			}
 		}
-		err = markMsgAsComment(inPath)
-		if err != nil {
+		if err := markMsgAsComment(inPath); err != nil {
 			log.Fatalln(err)
 		}
 		outPath, err := getOutPath(inPath)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		if _, err = os.Stat(outPath); err == nil {
-			err = os.Remove(outPath)
-			if err != nil {
-				log.Fatalln(err)
-			}
-		}
-		outFile, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, 0644)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		defer outFile.Close()
-		outData := new(OutTemplatData)
-		outData.Messages = msgs
-		outData.Services = srvs
-		outData.PackageName = f.Name.Name
-		tmplFuncs := template.FuncMap{"add": func(x, y int) int { return x + y }}
-		outTmpl := template.Must(template.New("outProto").Funcs(tmplFuncs).Parse(getTemplateText()))
-		if err := outTmpl.Execute(outFile, outData); err != nil {
+		if err := createProtoFile(outPath, f.Name.Name, msgs, srvs); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -249,6 +231,30 @@ func markMsgAsComment(path string) error {
 	err = ioutil.WriteFile(path, []byte(out), 0644)
 	if err != nil {
 		return nil
+	}
+	return nil
+}
+
+func createProtoFile(path, packageName string, msgs []*Msg, srvs map[string][]*SrvFunc) error {
+	if _, err := os.Stat(path); err == nil {
+		err = os.Remove(path)
+		if err != nil {
+			return err
+		}
+	}
+	outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+	outData := new(OutTemplatData)
+	outData.Messages = msgs
+	outData.Services = srvs
+	outData.PackageName = packageName
+	tmplFuncs := template.FuncMap{"add": func(x, y int) int { return x + y }}
+	outTmpl := template.Must(template.New("outProto").Funcs(tmplFuncs).Parse(getTemplateText()))
+	if err := outTmpl.Execute(outFile, outData); err != nil {
+		return err
 	}
 	return nil
 }
