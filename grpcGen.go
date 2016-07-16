@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -92,6 +93,9 @@ func main() {
 			log.Fatalln(err)
 		}
 		if err := createProtoFile(outPath, f.Name.Name, msgs, srvs); err != nil {
+			log.Fatalln(err)
+		}
+		if err := callProtoc(outPath); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -254,6 +258,20 @@ func createProtoFile(path, packageName string, msgs []*Msg, srvs map[string][]*S
 	tmplFuncs := template.FuncMap{"add": func(x, y int) int { return x + y }}
 	outTmpl := template.Must(template.New("outProto").Funcs(tmplFuncs).Parse(getTemplateText()))
 	if err := outTmpl.Execute(outFile, outData); err != nil {
+		return err
+	}
+	return nil
+}
+
+func callProtoc(path string) error {
+	if !strings.HasSuffix(path, ".go.proto") {
+		return fmt.Errorf("path %s doesn't have .go.proto extension", path)
+	}
+	trimmed := strings.TrimSuffix(path, ".go.proto")
+	dir, _ := filepath.Split(trimmed)
+	cmd := "protoc"
+	args := []string{"-I", dir, path, "--go_out=plugins=grpc:."}
+	if err := exec.Command(cmd, args...).Run(); err != nil {
 		return err
 	}
 	return nil
