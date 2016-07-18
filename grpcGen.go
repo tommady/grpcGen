@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -271,8 +272,11 @@ func callProtoc(path string) error {
 	dir, _ := filepath.Split(trimmed)
 	cmd := "protoc"
 	args := []string{"-I", dir, path, "--go_out=plugins=grpc:."}
-	if err := exec.Command(cmd, args...).Run(); err != nil {
-		return err
+	cmdProc := exec.Command(cmd, args...)
+	var stderr bytes.Buffer
+	cmdProc.Stderr = &stderr
+	if err := cmdProc.Run(); err != nil {
+		return fmt.Errorf("%s", stderr.String())
 	}
 	return nil
 }
