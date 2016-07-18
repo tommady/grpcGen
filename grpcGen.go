@@ -359,25 +359,23 @@ func getExampleText(path string) string {
 
 // @grpcGen:Message
 type Request struct {
-	EditMe1    string
-	EditMe2    int32
+	InEditMe1    string
 }
 
 // @grpcGen:Message
 type Reply struct {
-	EditMe1    string
-	EditMe2    int32
+	OutEditMe1    string
 }
 
 // @grpcGen:Service
 // @grpcGen:SrvName: EditMe
 func (q *server) FuncEditMe1(ctx context.Context, in *pb.Request) (out *pb.Reply, err error) {
-	return &pb.Reply{EditMe1: "Hello " + in.EditMe2}, nil
+	return &pb.Reply{OutEditMe1: "Hello " + in.InEditMe1}, nil
 }
 
 // @grpcGen:Service
 //@grpcGen:SrvName: EditMe
 func (s *server) FuncEditMe2(ctx context.Context, in *pb.Request) (out *pb.Reply, err error) {
-	return &pb.Reply{EditMe1: "Hey " + in.EditMe2}, nil
+	return &pb.Reply{OutEditMe1: "Hey " + in.InEditMe1}, nil
 }`, path)
 }
