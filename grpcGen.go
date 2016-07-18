@@ -286,12 +286,19 @@ func outExampleOnSource(path string) error {
 	if path == "" {
 		return fmt.Errorf("File does not exist")
 	}
+	if !strings.HasSuffix(path, ".go") {
+		return fmt.Errorf("path %s doesn't have .go extension", path)
+	}
 	in, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
 	lines := strings.Split(string(in), "\n")
-	exLines := strings.Split(getExampleText(), "\n")
+	dir, err := filepath.Abs(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	exLines := strings.Split(getExampleText(strings.Split(dir, "/src/")[1]), "\n")
 	lines = append(lines, exLines...)
 	out := strings.Join(lines, "\n")
 	err = ioutil.WriteFile(path, []byte(out), 0644)
@@ -325,8 +332,14 @@ message {{ $key }} {
 {{ end }}`
 }
 
-func getExampleText() string {
-	return `// @grpcGen:Message
+func getExampleText(path string) string {
+	return fmt.Sprintf(`import (
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	pb "%s"
+)
+
+// @grpcGen:Message
 type Request struct {
 	EditMe1    string
 	EditMe2    int32
@@ -348,5 +361,5 @@ func (q *server) FuncEditMe1(ctx context.Context, in *pb.Request) (out *pb.Reply
 //@grpcGen:SrvName: EditMe
 func (s *server) FuncEditMe2(ctx context.Context, in *pb.Request) (out *pb.Reply, err error) {
 	return &pb.Reply{EditMe1: "Hey " + in.EditMe2}, nil
-}`
+}`, path)
 }
