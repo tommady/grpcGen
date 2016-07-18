@@ -62,22 +62,33 @@ func main() {
 	for _, inPath := range os.Args[1:] {
 		msgs := make(map[string][]*MsgMember)
 		srvs := make(map[string][]*SrvFunc)
+		outPath, err := getOutPath(inPath)
+		if err != nil {
+			log.Fatalln(err)
+		}
 		f, err := fetchAstFileFromPath(inPath)
 		if err != nil {
 			log.Println(err)
 		}
 		if len(f.Decls) == 0 {
+			createProtoFile(outPath, f.Name.Name, msgs, srvs)
 			outExampleOnSource(inPath)
 			log.Fatalln("no declaration exists, going to generate example")
 		}
 		for i, decl := range f.Decls {
 			if genDecl, ok := decl.(*ast.GenDecl); ok {
+				if genDecl.Doc == nil {
+					continue
+				}
 				if msg, err := fetchMsg(genDecl); err == nil {
 					msgs[msg.Name] = msg.Members
 				} else {
 					log.Printf("decl[%d] fetchMsg fail:%q", i, err)
 				}
 			} else if funcDecl, ok := decl.(*ast.FuncDecl); ok {
+				if funcDecl.Doc == nil {
+					continue
+				}
 				if srv, err := fetchSrv(funcDecl); err == nil {
 					srvs[srv.Name] = append(srvs[srv.Name], srv.Funcs)
 				} else {
@@ -87,17 +98,13 @@ func main() {
 				log.Printf("decl[%d] cannot be converted into FuncDecl or genDecl", i)
 			}
 		}
-		if err := markMsgAsComment(inPath); err != nil {
-			log.Fatalln(err)
-		}
-		outPath, err := getOutPath(inPath)
-		if err != nil {
-			log.Fatalln(err)
-		}
 		if err := createProtoFile(outPath, f.Name.Name, msgs, srvs); err != nil {
 			log.Fatalln(err)
 		}
 		if err := callProtoc(outPath); err != nil {
+			log.Fatalln(err)
+		}
+		if err := markMsgAsComment(inPath); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -207,8 +214,12 @@ func getOutPath(path string) (string, error) {
 		return "", fmt.Errorf("path %s doesn't have .go extension", path)
 	}
 	trimmed := strings.TrimSuffix(path, ".go")
-	dir, file := filepath.Split(trimmed)
-	return filepath.Join(dir, fmt.Sprintf("%s.go.proto", file)), nil
+	_, file := filepath.Split(trimmed)
+	absDir, err := filepath.Abs(filepath.Dir(path))
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(absDir, "/pb", fmt.Sprintf("%s.go.proto", file)), nil
 }
 
 func markMsgAsComment(path string) error {
@@ -242,13 +253,19 @@ func markMsgAsComment(path string) error {
 }
 
 func createProtoFile(path, packageName string, msgs map[string][]*MsgMember, srvs map[string][]*SrvFunc) error {
-	if _, err := os.Stat(path); err == nil {
-		err = os.Remove(path)
-		if err != nil {
+	// "/pb" foder does not exist, create it
+	if _, err := os.Stat(filepath.Dir(path)); err != nil {
+		if err := os.Mkdir("pb", 0777); err != nil {
 			return err
 		}
 	}
-	outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
+	// protobuf file existed, delete it
+	if _, err := os.Stat(path); err == nil {
+		if err := os.Remove(path); err != nil {
+			return err
+		}
+	}
+	outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
 		return err
 	}
@@ -272,7 +289,8 @@ func callProtoc(path string) error {
 	trimmed := strings.TrimSuffix(path, ".go.proto")
 	dir, _ := filepath.Split(trimmed)
 	cmd := "protoc"
-	args := []string{"-I", dir, path, "--go_out=plugins=grpc:."}
+	outFolder := fmt.Sprintf("--go_out=plugins=grpc:%s", dir)
+	args := []string{"-I", dir, path, outFolder}
 	cmdProc := exec.Command(cmd, args...)
 	var stderr bytes.Buffer
 	cmdProc.Stderr = &stderr
@@ -336,7 +354,7 @@ func getExampleText(path string) string {
 	return fmt.Sprintf(`import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	pb "%s"
+	pb "%s/pb"
 )
 
 // @grpcGen:Message
