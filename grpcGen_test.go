@@ -8,6 +8,30 @@ import (
 	"testing"
 )
 
+func TestCorrectTypes(t *testing.T) {
+	expects := map[string][]*MsgMember{
+		"Test": []*MsgMember{
+			{Name: "Age", Type: "uint32"},
+			{Name: "Name", Type: "bytes"},
+			{Name: "Money", Type: "int32"},
+		},
+	}
+	actuals := map[string][]*MsgMember{
+		"Test": []*MsgMember{
+			{Name: "Age", Type: "uint"},
+			{Name: "Name", Type: "[]byte"},
+			{Name: "Money", Type: "int"},
+		},
+	}
+	err := correctTypes(actuals)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expects, actuals) {
+		t.Errorf("actual and expect are not the same")
+	}
+}
+
 func TestFetchMsg(t *testing.T) {
 	src := `
 package grpc_test

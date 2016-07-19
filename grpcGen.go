@@ -98,6 +98,9 @@ func main() {
 				log.Printf("decl[%d] cannot be converted into FuncDecl or genDecl", i)
 			}
 		}
+		if err := correctTypes(msgs); err != nil {
+			log.Fatalln(err)
+		}
 		if err := createProtoFile(outPath, f.Name.Name, msgs, srvs); err != nil {
 			log.Fatalln(err)
 		}
@@ -322,6 +325,24 @@ func outExampleOnSource(path string) error {
 	err = ioutil.WriteFile(path, []byte(out), 0644)
 	if err != nil {
 		return nil
+	}
+	return nil
+}
+
+// correctTypes follows gRPC Scalar Value Types to do translating:
+// https://developers.google.com/protocol-buffers/docs/proto3#scalar
+func correctTypes(msgs map[string][]*MsgMember) error {
+	for _, v := range msgs {
+		for _, msg := range v {
+			switch msg.Type {
+			case "int":
+				msg.Type = "int32"
+			case "uint":
+				msg.Type = "uint32"
+			case "[]byte":
+				msg.Type = "bytes"
+			}
+		}
 	}
 	return nil
 }
