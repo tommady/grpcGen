@@ -2,6 +2,17 @@
 
 A tool for auto converting go code into [gRPC](http://www.grpc.io/) [Protobuf](https://developers.google.com/protocol-buffers/) file.
 
+## Pre-Install
+1. Go 1.5 or later
+2. gRPC
+3. gRPC-go
+
+to get gRPC and gRPC-go just type:
+```bash
+$ go get google.golang.org/grpc
+$ go get -a github.com/golang/protobuf/protoc-gen-go
+```
+
 ## Howto
 simply type these in a go file:
 ```go
