@@ -353,7 +353,7 @@ func getTemplateText() string {
 //
 syntax = "proto3";
 
-package {{ .PackageName }};
+package {{ .PackageName }}_pb;
 {{ range $key, $value := .Services }}
 service {{ $key }} {
   {{ range $value }}
