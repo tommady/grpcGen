@@ -107,9 +107,6 @@ func main() {
 		if err := callProtoc(outPath); err != nil {
 			log.Fatalln(err)
 		}
-		if err := markMsgAsComment(inPath); err != nil {
-			log.Fatalln(err)
-		}
 	}
 }
 
