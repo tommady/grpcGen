@@ -331,13 +331,15 @@ func outExampleOnSource(path string) error {
 func correctTypes(msgs map[string][]*MsgMember) error {
 	for _, v := range msgs {
 		for _, msg := range v {
-			switch msg.Type {
-			case "int":
+			if msg.Type == "int" {
 				msg.Type = "int32"
-			case "uint":
+			} else if msg.Type == "uint" {
 				msg.Type = "uint32"
-			case "[]byte":
+			} else if msg.Type == "[]byte" {
 				msg.Type = "bytes"
+			} else if strings.HasPrefix(msg.Type, "[]") {
+				t := strings.TrimPrefix(msg.Type, "[]")
+				msg.Type = "repeated " + t
 			}
 		}
 	}
