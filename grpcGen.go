@@ -81,7 +81,9 @@ func main() {
 					continue
 				}
 				if msg, err := fetchMsg(genDecl); err == nil {
-					msgs[msg.Name] = msg.Members
+					if msg != nil {
+						msgs[msg.Name] = msg.Members
+					}
 				} else {
 					log.Printf("decl[%d] fetchMsg fail:%q", i, err)
 				}
@@ -90,13 +92,21 @@ func main() {
 					continue
 				}
 				if srv, err := fetchSrv(funcDecl); err == nil {
-					srvs[srv.Name] = append(srvs[srv.Name], srv.Funcs)
+					if srv != nil {
+						srvs[srv.Name] = append(srvs[srv.Name], srv.Funcs)
+					}
 				} else {
 					log.Printf("decl[%d] fetchSrv fail:%q", i, err)
 				}
 			} else {
 				log.Printf("decl[%d] cannot be converted into FuncDecl or genDecl", i)
 			}
+		}
+		if len(msgs) == 0 {
+			log.Fatalf("%s symbol cannot be found", msgSymbol)
+		}
+		if len(srvs) == 0 {
+			log.Fatalf("%s symbol cannot be found", srvSymbol)
 		}
 		if err := correctTypes(msgs); err != nil {
 			log.Fatalln(err)
@@ -161,7 +171,7 @@ func fetchMsg(genDecl *ast.GenDecl) (*Msg, error) {
 	if found {
 		return msg, nil
 	}
-	return nil, fmt.Errorf("%s symbol cannot be found", msgSymbol)
+	return nil, nil
 }
 
 func fetchSrv(funcDecl *ast.FuncDecl) (*Srv, error) {
@@ -201,12 +211,10 @@ func fetchSrv(funcDecl *ast.FuncDecl) (*Srv, error) {
 			}
 		}
 	}
-	if !foundSrvName {
-		return nil, fmt.Errorf("%s symbol cannot be found", srvNameSymbol)
-	} else if !foundSrv {
-		return nil, fmt.Errorf("%s symbol cannot be found", srvSymbol)
+	if foundSrv && foundSrvName {
+		return srv, nil
 	}
-	return srv, nil
+	return nil, nil
 }
 
 func getOutPath(path string) (string, error) {
