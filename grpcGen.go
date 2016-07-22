@@ -329,6 +329,9 @@ func outExampleOnSource(path string) error {
 // correctTypes follows gRPC Scalar Value Types to do translating:
 // https://developers.google.com/protocol-buffers/docs/proto3#scalar
 func correctTypes(msgs map[string][]*MsgMember) error {
+	if msgs == nil {
+		return fmt.Errorf("input msgs is nil")
+	}
 	for _, v := range msgs {
 		for _, msg := range v {
 			if msg.Type == "int" {
@@ -340,6 +343,21 @@ func correctTypes(msgs map[string][]*MsgMember) error {
 			} else if strings.HasPrefix(msg.Type, "[]") {
 				t := strings.TrimPrefix(msg.Type, "[]")
 				msg.Type = "repeated " + t
+			} else if strings.HasPrefix(msg.Type, "map") {
+				t := strings.TrimPrefix(msg.Type, "map")
+				t = strings.Map(func(r rune) rune {
+					switch {
+					case r == '[':
+						return ' '
+					case r == ']':
+						return ' '
+					case r == '*':
+						return ' '
+					}
+					return r
+				}, t)
+				ts := strings.Fields(t)
+				msg.Type = fmt.Sprintf("map<%s, %s>", ts[0], ts[1])
 			}
 		}
 	}

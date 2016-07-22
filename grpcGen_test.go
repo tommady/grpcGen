@@ -15,6 +15,7 @@ func TestCorrectTypes(t *testing.T) {
 			{Name: "Name", Type: "bytes"},
 			{Name: "Money", Type: "int32"},
 			{Name: "Account", Type: "repeated string"},
+			{Name: "TMap", Type: "map<string, Bar>"},
 		},
 	}
 	actuals := map[string][]*MsgMember{
@@ -23,6 +24,7 @@ func TestCorrectTypes(t *testing.T) {
 			{Name: "Name", Type: "[]byte"},
 			{Name: "Money", Type: "int"},
 			{Name: "Account", Type: "[]string"},
+			{Name: "TMap", Type: "map[string]*Bar"},
 		},
 	}
 	err := correctTypes(actuals)
