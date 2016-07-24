@@ -42,7 +42,7 @@ It is the
 
 ![Alt text](doc/grpc_message.png)
 
-In here, you only need to define a go structure but with the message symbol ***@grpcGen:Message*** then grpcGen will parsing them into gRPC Message type for you!
+In here, you only need to define a go structure but with the message symbol ***@grpcGen:Message*** then grpcGen will parsing them into gRPC Message type for you and mark the go structure you defined as commends for letting others to understand our IN, OUT structure looks like!
 
 
 ![Alt text](doc/grpcGen_message.png)
