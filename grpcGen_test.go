@@ -17,6 +17,8 @@ func TestCorrectTypes(t *testing.T) {
 			{Name: "Account", Type: "repeated string"},
 			{Name: "TMap", Type: "map<string, Bar>"},
 			{Name: "PointerS", Type: "Bar"},
+			{Name: "Void", Type: "google.protobuf.Value"},
+			{Name: "VoidMap", Type: "map<string, google.protobuf.Value>"},
 		},
 	}
 	actuals := map[string][]*MsgMember{
@@ -27,6 +29,8 @@ func TestCorrectTypes(t *testing.T) {
 			{Name: "Account", Type: "[]string"},
 			{Name: "TMap", Type: "map[string]*Bar"},
 			{Name: "PointerS", Type: "*Bar"},
+			{Name: "Void", Type: "interface{}"},
+			{Name: "VoidMap", Type: "map[string]interface{}"},
 		},
 	}
 	err := correctTypes(actuals)

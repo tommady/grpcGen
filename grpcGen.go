@@ -343,6 +343,8 @@ func correctTypes(msgs map[string][]*MsgMember) error {
 	if msgs == nil {
 		return fmt.Errorf("input msgs is nil")
 	}
+	// TODO: converting types needs to be specified in individual,
+	// like []map[string]int type or []int ... etc all needs to be handled.
 	for _, v := range msgs {
 		for _, msg := range v {
 			if msg.Type == "int" {
@@ -370,9 +372,16 @@ func correctTypes(msgs map[string][]*MsgMember) error {
 				ts := strings.Fields(t)
 				msg.Type = fmt.Sprintf("map<%s, %s>", ts[0], ts[1])
 			}
+			if strings.Contains(msg.Type, "interface{}") {
+				msg.Type = strings.Replace(
+					msg.Type,
+					"interface{}",
+					"google.protobuf.Value",
+					-1,
+				)
+			}
 			if strings.Contains(msg.Type, "*") {
-				t := strings.Replace(msg.Type, "*", "", -1)
-				msg.Type = t
+				msg.Type = strings.Replace(msg.Type, "*", "", -1)
 			}
 		}
 	}
@@ -386,6 +395,8 @@ func getTemplateText() string {
 syntax = "proto3";
 
 package {{ .PackageName }}_pb;
+
+import "google/protobuf/struct.proto";
 {{ range $key, $value := .Services }}
 service {{ $key }} {
   {{ range $value }}
