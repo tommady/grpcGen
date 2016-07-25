@@ -248,7 +248,7 @@ func markMsgAsComment(path string) error {
 				if !strings.HasPrefix(lines[j], "//") {
 					lines[j] = "// " + lines[j]
 				}
-				if strings.Contains(lines[j], "}") {
+				if lines[j] == "// }" {
 					i = j
 					break
 				}
