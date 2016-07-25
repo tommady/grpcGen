@@ -369,6 +369,9 @@ func correctTypes(msgs map[string][]*MsgMember) error {
 				}, t)
 				ts := strings.Fields(t)
 				msg.Type = fmt.Sprintf("map<%s, %s>", ts[0], ts[1])
+			} else if strings.HasPrefix(msg.Type, "*") {
+				t := strings.TrimPrefix(msg.Type, "*")
+				msg.Type = t
 			}
 		}
 	}
