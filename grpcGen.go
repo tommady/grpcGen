@@ -343,35 +343,8 @@ func correctTypes(msgs map[string][]*MsgMember) error {
 	if msgs == nil {
 		return fmt.Errorf("input msgs is nil")
 	}
-	// TODO: converting types needs to be specified in individual,
-	// like []map[string]int type or []int ... etc all needs to be handled.
 	for _, v := range msgs {
 		for _, msg := range v {
-			if msg.Type == "int" {
-				msg.Type = "int32"
-			} else if msg.Type == "uint" {
-				msg.Type = "uint32"
-			} else if msg.Type == "[]byte" {
-				msg.Type = "bytes"
-			} else if strings.HasPrefix(msg.Type, "[]") {
-				t := strings.TrimPrefix(msg.Type, "[]")
-				msg.Type = "repeated " + t
-			} else if strings.HasPrefix(msg.Type, "map") {
-				t := strings.TrimPrefix(msg.Type, "map")
-				t = strings.Map(func(r rune) rune {
-					switch {
-					case r == '[':
-						return ' '
-					case r == ']':
-						return ' '
-					case r == '*':
-						return ' '
-					}
-					return r
-				}, t)
-				ts := strings.Fields(t)
-				msg.Type = fmt.Sprintf("map<%s, %s>", ts[0], ts[1])
-			}
 			if strings.Contains(msg.Type, "interface{}") {
 				msg.Type = strings.Replace(
 					msg.Type,
@@ -379,6 +352,31 @@ func correctTypes(msgs map[string][]*MsgMember) error {
 					"google.protobuf.Value",
 					-1,
 				)
+			}
+			if strings.Contains(msg.Type, "int") {
+				msg.Type = strings.Replace(msg.Type, "int", "int32", -1)
+			}
+			if strings.Contains(msg.Type, "[]byte") {
+				msg.Type = strings.Replace(msg.Type, "[]byte", "bytes", -1)
+			}
+			if strings.Contains(msg.Type, "[]") {
+				msg.Type = strings.Replace(msg.Type, "[]", "repeated ", -1)
+			}
+			if strings.Contains(msg.Type, "map") {
+				ts := strings.Split(msg.Type, "map")
+				prefix := ts[0]
+				suffix := ts[1]
+				suffix = strings.Map(func(r rune) rune {
+					switch {
+					case r == '[':
+						return ' '
+					case r == ']':
+						return ' '
+					}
+					return r
+				}, suffix)
+				ts = strings.Fields(suffix)
+				msg.Type = fmt.Sprintf("%smap<%s, %s>", prefix, ts[0], ts[1])
 			}
 			if strings.Contains(msg.Type, "*") {
 				msg.Type = strings.Replace(msg.Type, "*", "", -1)

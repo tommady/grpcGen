@@ -37,8 +37,17 @@ func TestCorrectTypes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(expects, actuals) {
-		t.Errorf("actual and expect are not the same")
+	for i := 0; i < len(expects["Test"]); i++ {
+		expectName := expects["Test"][i].Name
+		actualName := actuals["Test"][i].Name
+		expectType := expects["Test"][i].Type
+		actualType := actuals["Test"][i].Type
+		if expectName != actualName {
+			t.Errorf("name -> expect:%q, atcaul:%q", expectName, actualName)
+		}
+		if expectType != actualType {
+			t.Errorf("type -> expect:%q, atcaul:%q", expectType, actualType)
+		}
 	}
 }
 
